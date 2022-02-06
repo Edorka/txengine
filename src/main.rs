@@ -1,15 +1,15 @@
 use std::error::Error;
 use std::fs::File;
 
-mod operations;
-use crate::operations::{Operation, for_each_operation_in};
+mod transactions;
+use crate::transactions::{Transaction, for_each_transaction_in};
+mod accounts;
  
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = std::env::args().collect();
-    println!("{:?}", args);
     let file_path = &args[1];
     let source = File::open(file_path)?;
-    for_each_operation_in(source, |item: Operation| {println!("{:?}", item)});
+    for_each_transaction_in(source, |item: Transaction| {println!("{:?}", item)});
     Ok(())
 }
