@@ -2,6 +2,7 @@ use serde::{Deserialize};
 use csv::{ReaderBuilder, Trim};
 use std::io::Read;
 
+pub type TransactionID = u32;
 
 #[derive(Debug, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "lowercase")]
@@ -20,7 +21,7 @@ pub struct Transaction {
     #[serde(rename="type")]
     pub tx_type: TransactionType,
     pub client: u16,
-    pub tx: u32,
+    pub tx: TransactionID,
     pub amount: Option<f32>,
 }
 impl Transaction {
@@ -163,7 +164,6 @@ mod tests {
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
         for_each_transaction_in(source, move |item: Transaction| {
-            println!("got {:?}", item);
             assert_eq!(item, expected);
             obtained.push(item)
         });

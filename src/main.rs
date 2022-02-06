@@ -4,6 +4,7 @@ use std::fs::File;
 mod transactions;
 use crate::transactions::{Transaction, for_each_transaction_in};
 mod accounts;
+mod state;
  
 
 fn main() -> Result<(), Box<dyn Error>> {

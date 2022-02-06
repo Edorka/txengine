@@ -1,22 +1,30 @@
-use crate::transactions::{Transaction, TransactionType};
+use crate::transactions::{Transaction, TransactionType, TransactionID};
 
 pub type ClientID = u16;
 
 pub struct Account {
-    client: ClientID,
-    available: f32,
-    held: f32,
-    total: f32,
-    locked: bool,
+    pub client: ClientID,
+    pub available: f32,
+    pub held: f32,
+    pub total: f32,
+    pub locked: bool,
 }
 
-enum AccountPerfomErr {
+pub enum AccountPerfomErr {
     UnknownType(TransactionType)
-
 }
 
 impl Account {
-    fn perform(&mut self, tx: Transaction) -> Result<(), AccountPerfomErr> {
+    pub fn for_client(client: ClientID) -> Self {
+        Account {
+            client,
+            available: 0.0,
+            held: 0.0,
+            total: 0.0,
+            locked: false,
+        }
+    }
+    pub fn perform(&mut self, tx: Transaction) -> Result<(), AccountPerfomErr> {
         assert_eq!(tx.client, self.client);
 
         match tx.tx_type {
