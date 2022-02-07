@@ -28,17 +28,30 @@ impl Account {
     pub fn perform(&mut self, tx: &Transaction) -> Result<(), AccountPerfomErr> {
         assert_eq!(tx.client, self.client);
 
+        let amount = tx.amount();
         match &tx.tx_type {
             TransactionType::Deposit => {
-                self.available += tx.amount();
+                self.available += amount;
                 Ok(())
             }
             TransactionType::Withdrawal => {
-                self.available -= tx.amount();
+                self.available -= amount;
                 Ok(())
             }
             tx_type => Err(AccountPerfomErr::UnknownType(tx_type.clone())),
         }
+    }
+    pub fn dispute(&mut self, tx: &Transaction) -> Result<(), AccountPerfomErr> {
+        let disputed = tx.amount();
+        self.held += disputed;
+        self.available -= disputed;
+        Ok(())
+    }
+    pub fn resolve(&mut self, tx: &Transaction) -> Result<(), AccountPerfomErr> {
+        let disputed = tx.amount();
+        self.held -= disputed;
+        self.available += disputed;
+        Ok(())
     }
     pub fn total(&self) -> f32 {
         self.available + self.held
@@ -80,5 +93,58 @@ mod tests {
         assert!(performed_correctly);
         assert_eq!(account.available, 3.8766);
         assert_eq!(account.total(), 3.8766);
+    }
+
+    #[test]
+    fn test_do_dispute() {
+        let mut account = Account {
+            client: 1,
+            available: 5.0,
+            held: 0.0,
+            total: 5.0,
+            locked: false,
+        };
+        let transaction = Transaction::new(TransactionType::Deposit, 1, 1, Some(1.1234));
+        let dispute_correctly = account.dispute(&transaction).is_ok();
+        assert!(dispute_correctly);
+        assert_eq!(account.available, 5.0 - 1.1234);
+        assert_eq!(account.held, 1.1234);
+        assert_eq!(account.total(), 5.0);
+    }
+
+    #[test]
+    fn test_do_resolve() {
+        let mut account = Account {
+            client: 1,
+            available: 0.0,
+            held: 5.0,
+            total: 5.0,
+            locked: false,
+        };
+        let transaction = Transaction::new(TransactionType::Deposit, 1, 1, Some(1.1234));
+        let resolved_correctly = account.resolve(&transaction).is_ok();
+        assert!(resolved_correctly);
+        assert_eq!(account.available, 1.1234);
+        assert_eq!(account.held, 5.0 - 1.1234);
+        assert_eq!(account.total(), 5.0);
+    }
+
+    #[test]
+    fn test_do_chargeback() {
+        let mut account = Account {
+            client: 1,
+            available: 0.0,
+            held: 5.0,
+            total: 5.0,
+            locked: false,
+        };
+        let transaction = Transaction::new(TransactionType::Deposit, 1, 1, Some(1.1234));
+        let resolved_correctly = account.chargeback(&transaction).is_ok();
+        assert!(resolved_correctly);
+        assert_eq!(account.available, 0.0);
+        assert_eq!(account.held, 0.0);
+        assert_eq!(account.total(), 5.0);
+        assert_eq!(account.locked, true);
+        
     }
 }
