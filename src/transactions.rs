@@ -1,5 +1,5 @@
-use serde::{Deserialize};
 use csv::{ReaderBuilder, Trim};
+use serde::Deserialize;
 use std::io::Read;
 
 pub type TransactionID = u32;
@@ -18,19 +18,14 @@ pub enum TransactionType {
 #[serde(tag = "type")]
 #[serde(rename_all = "lowercase")]
 pub struct Transaction {
-    #[serde(rename="type")]
+    #[serde(rename = "type")]
     pub tx_type: TransactionType,
     pub client: u16,
     pub tx: TransactionID,
     pub amount: Option<f32>,
 }
 impl Transaction {
-    pub fn new(
-        tx_type: TransactionType,
-        client: u16,
-        tx: u32,
-        amount: Option<f32>) -> Self
-    {
+    pub fn new(tx_type: TransactionType, client: u16, tx: u32, amount: Option<f32>) -> Self {
         Transaction {
             tx_type,
             client,
@@ -45,25 +40,27 @@ impl Transaction {
 
 impl PartialEq for Transaction {
     fn eq(&self, other: &Self) -> bool {
-        self.tx_type == other.tx_type &&
-        self.client == other.client &&
-        self.tx == other.tx &&
-        self.amount == other.amount
+        self.tx_type == other.tx_type
+            && self.client == other.client
+            && self.tx == other.tx
+            && self.amount == other.amount
     }
 }
 
-pub fn for_each_transaction_in<F>(source: impl Read, mut do_for_each: F) 
-    where F: FnMut(Transaction) {
-     let mut rdr = ReaderBuilder::new()
+pub fn for_each_transaction_in<F>(source: impl Read, mut do_for_each: F)
+where
+    F: FnMut(Transaction),
+{
+    let mut rdr = ReaderBuilder::new()
         .flexible(true)
         .delimiter(b',')
         .flexible(true)
         .trim(Trim::All)
         .from_reader(source);
-     for record in rdr.deserialize() {
-         do_for_each(record.unwrap());
-     }
-} 
+    for record in rdr.deserialize() {
+        do_for_each(record.unwrap());
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -120,7 +117,7 @@ mod tests {
             tx_type: TransactionType::Dispute,
             client: 1,
             tx: 1,
-            amount: None
+            amount: None,
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
         for_each_transaction_in(source, move |item: Transaction| {
@@ -140,7 +137,7 @@ mod tests {
             tx_type: TransactionType::Resolve,
             client: 1,
             tx: 1,
-            amount: None
+            amount: None,
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
         for_each_transaction_in(source, move |item: Transaction| {
@@ -160,7 +157,7 @@ mod tests {
             tx_type: TransactionType::Chargeback,
             client: 1,
             tx: 1,
-            amount: None
+            amount: None,
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
         for_each_transaction_in(source, move |item: Transaction| {
