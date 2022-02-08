@@ -1,6 +1,4 @@
-use csv::{ReaderBuilder, Trim};
 use serde::Deserialize;
-use std::io::Read;
 
 pub type TransactionID = u32;
 
@@ -25,6 +23,7 @@ pub struct Transaction {
     pub amount: Option<f32>,
 }
 impl Transaction {
+    #[allow(dead_code)]
     pub fn new(tx_type: TransactionType, client: u16, tx: u32, amount: Option<f32>) -> Self {
         Transaction {
             tx_type,
@@ -47,25 +46,11 @@ impl PartialEq for Transaction {
     }
 }
 
-pub fn for_each_transaction_in<F>(source: impl Read, mut do_for_each: F)
-where
-    F: FnMut(Transaction),
-{
-    let mut rdr = ReaderBuilder::new()
-        .flexible(true)
-        .delimiter(b',')
-        .flexible(true)
-        .trim(Trim::All)
-        .from_reader(source);
-    for record in rdr.deserialize() {
-        do_for_each(record.unwrap());
-    }
-}
-
 #[cfg(test)]
 mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
+    use crate::io::for_each_item_in;
 
     #[test]
     fn test_load_csv_deposit() {
@@ -80,9 +65,8 @@ mod tests {
             amount: Some(1.0),
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
-        for_each_transaction_in(source, move |item: Transaction| {
+        for_each_item_in(source, move |item: Transaction| {
             assert_eq!(expected, item);
-            println!("got {:?}", item);
             obtained.push(item)
         });
     }
@@ -100,8 +84,7 @@ mod tests {
             amount: Some(3.0),
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
-        for_each_transaction_in(source, move |item: Transaction| {
-            println!("got {:?}", item);
+        for_each_item_in(source, move |item: Transaction| {
             assert_eq!(item, expected);
             obtained.push(item)
         });
@@ -120,8 +103,7 @@ mod tests {
             amount: None,
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
-        for_each_transaction_in(source, move |item: Transaction| {
-            println!("got {:?}", item);
+        for_each_item_in(source, move |item: Transaction| {
             assert_eq!(item, expected);
             obtained.push(item)
         });
@@ -140,8 +122,7 @@ mod tests {
             amount: None,
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
-        for_each_transaction_in(source, move |item: Transaction| {
-            println!("got {:?}", item);
+        for_each_item_in(source, move |item: Transaction| {
             assert_eq!(item, expected);
             obtained.push(item)
         });
@@ -160,7 +141,7 @@ mod tests {
             amount: None,
         };
         let mut obtained: Vec<Transaction> = Vec::<Transaction>::new();
-        for_each_transaction_in(source, move |item: Transaction| {
+        for_each_item_in(source, move |item: Transaction| {
             assert_eq!(item, expected);
             obtained.push(item)
         });

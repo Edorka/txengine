@@ -1,7 +1,9 @@
 use crate::transactions::{Transaction, TransactionType};
+use serde::Serialize;
 
 pub type ClientID = u16;
 
+#[derive(Debug, Serialize, Clone)]
 pub struct Account {
     pub client: ClientID,
     pub available: f32,
@@ -32,10 +34,12 @@ impl Account {
         match &tx.tx_type {
             TransactionType::Deposit => {
                 self.available += amount;
+                self.total = self.calc_total();
                 Ok(())
             }
             TransactionType::Withdrawal => {
                 self.available -= amount;
+                self.total = self.calc_total();
                 Ok(())
             }
             tx_type => Err(AccountPerfomErr::UnknownType(tx_type.clone())),
@@ -45,15 +49,24 @@ impl Account {
         let disputed = tx.amount();
         self.held += disputed;
         self.available -= disputed;
+        self.total = self.calc_total();
         Ok(())
     }
     pub fn resolve(&mut self, tx: &Transaction) -> Result<(), AccountPerfomErr> {
         let disputed = tx.amount();
         self.held -= disputed;
         self.available += disputed;
+        self.total = self.calc_total();
         Ok(())
     }
-    pub fn total(&self) -> f32 {
+    pub fn chargeback(&mut self, tx: &Transaction) -> Result<(), AccountPerfomErr> {
+        let disputed = tx.amount();
+        self.held -= disputed;
+        self.locked = true;
+        self.total = self.calc_total();
+        Ok(())
+    }
+    pub fn calc_total(&self) -> f32 {
         self.available + self.held
     }
 }
@@ -76,7 +89,7 @@ mod tests {
         let performed_correctly = account.perform(&transaction).is_ok();
         assert!(performed_correctly);
         assert_eq!(account.available, 1.0);
-        assert_eq!(account.total(), 1.0);
+        assert_eq!(account.total, 1.0);
     }
 
     #[test]
@@ -92,7 +105,7 @@ mod tests {
         let performed_correctly = account.perform(&transaction).is_ok();
         assert!(performed_correctly);
         assert_eq!(account.available, 3.8766);
-        assert_eq!(account.total(), 3.8766);
+        assert_eq!(account.total, 3.8766);
     }
 
     #[test]
@@ -109,7 +122,7 @@ mod tests {
         assert!(dispute_correctly);
         assert_eq!(account.available, 5.0 - 1.1234);
         assert_eq!(account.held, 1.1234);
-        assert_eq!(account.total(), 5.0);
+        assert_eq!(account.total, 5.0);
     }
 
     #[test]
@@ -126,7 +139,7 @@ mod tests {
         assert!(resolved_correctly);
         assert_eq!(account.available, 1.1234);
         assert_eq!(account.held, 5.0 - 1.1234);
-        assert_eq!(account.total(), 5.0);
+        assert_eq!(account.total, 5.0);
     }
 
     #[test]
@@ -142,9 +155,8 @@ mod tests {
         let resolved_correctly = account.chargeback(&transaction).is_ok();
         assert!(resolved_correctly);
         assert_eq!(account.available, 0.0);
-        assert_eq!(account.held, 0.0);
-        assert_eq!(account.total(), 5.0);
+        assert_eq!(account.held, 5.0 - 1.1234);
+        assert_eq!(account.total, 5.0 - 1.1234);
         assert_eq!(account.locked, true);
-        
     }
 }

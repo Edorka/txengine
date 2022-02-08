@@ -3,7 +3,7 @@ use crate::transactions::{Transaction, TransactionID, TransactionType};
 use std::collections::{HashMap, HashSet};
 
 pub struct State {
-    accounts: HashMap<ClientID, Account>,
+    pub accounts: HashMap<ClientID, Account>,
     transactions: HashMap<TransactionID, Transaction>,
     disputed_ids: HashSet<TransactionID>,
 }
@@ -19,7 +19,7 @@ impl Default for State {
 }
 
 impl State {
-    fn perform(&mut self, tx: &Transaction) -> Result<(), AccountPerfomErr> {
+    pub fn perform(&mut self, tx: &Transaction) -> Result<(), AccountPerfomErr> {
         let client_id: ClientID = tx.client;
         let transaction_id: TransactionID = tx.tx;
         let account = self
@@ -40,11 +40,18 @@ impl State {
                 true => account.resolve(&reference),
                 _ => Ok(()),
             },
-            TransactionType::Chargeback => Ok(()),
+            TransactionType::Chargeback => match self.disputed_ids.remove(&transaction_id) {
+                true => account.chargeback(&reference),
+                _ => Ok(()),
+            },
         }
     }
-    fn get_account(&self, id: ClientID) -> &Account {
+    #[allow(dead_code)]
+    pub fn get_account(&self, id: ClientID) -> &Account {
         self.accounts.get(&id).unwrap()
+    }
+    pub fn get_results(&self) -> Vec<Account> {
+        self.accounts.values().cloned().collect()
     }
 }
 
@@ -64,16 +71,6 @@ mod tests {
     }
 
     #[test]
-    fn test_accounts_receive_withdrawal() {
-        let mut state = State::default();
-        let transaction = Transaction::new(TransactionType::Withdrawal, 1, 1, Some(1.1234));
-        let performed_correctly = state.perform(&transaction).is_ok();
-        let account = state.get_account(1);
-        assert!(performed_correctly);
-        assert_eq!(account.available, -1.1234);
-    }
-
-    #[test]
     fn test_accounts_receive_dispute() {
         let mut state = State::default();
         let transaction = Transaction::new(TransactionType::Deposit, 1, 1, Some(1.1234));
@@ -85,7 +82,7 @@ mod tests {
         assert!(dispute_accepted);
         assert_eq!(account.available, 0.0000);
         assert_eq!(account.held, 1.1234);
-        assert_eq!(account.total(), 1.1234);
+        assert_eq!(account.total, 1.1234);
     }
 
     #[test]
@@ -103,7 +100,7 @@ mod tests {
         assert!(resolution_accepted);
         assert_eq!(account.available, 1.1234);
         assert_eq!(account.held, 0.0000);
-        assert_eq!(account.total(), 1.1234);
+        assert_eq!(account.total, 1.1234);
     }
 
     #[test]
@@ -118,6 +115,25 @@ mod tests {
         assert!(resolution_accepted);
         assert_eq!(account.available, 1.1234);
         assert_eq!(account.held, 0.0000);
-        assert_eq!(account.total(), 1.1234);
+        assert_eq!(account.total, 1.1234);
+    }
+
+    #[test]
+    fn test_accounts_receive_chargeback() {
+        let mut state = State::default();
+        let transaction = Transaction::new(TransactionType::Deposit, 1, 1, Some(1.1234));
+        let performed_correctly = state.perform(&transaction).is_ok();
+        let dispute = Transaction::new(TransactionType::Dispute, 1, 1, None);
+        let dispute_accepted = state.perform(&dispute).is_ok();
+        let chargeback = Transaction::new(TransactionType::Chargeback, 1, 1, None);
+        let chargeback_accepted = state.perform(&chargeback).is_ok();
+        let account = state.get_account(1);
+        assert!(performed_correctly);
+        assert!(dispute_accepted);
+        assert!(chargeback_accepted);
+        assert_eq!(account.available, 0.0000);
+        assert_eq!(account.held, 0.0000);
+        assert_eq!(account.total, 0.0000);
+        assert_eq!(account.locked, true);
     }
 }
