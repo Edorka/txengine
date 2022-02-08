@@ -1,13 +1,11 @@
 use std::error::Error;
 use std::fs::File;
 
-mod transactions;
-use crate::transactions::Transaction;
-mod accounts;
 mod io;
 mod state;
 use crate::io::{for_each_item_in, output};
 use crate::state::State;
+use crate::state::transactions::Transaction;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args: Vec<String> = std::env::args().collect();

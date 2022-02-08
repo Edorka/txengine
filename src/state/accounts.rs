@@ -1,4 +1,4 @@
-use crate::transactions::{Transaction, TransactionType};
+use crate::state::transactions::{Transaction, TransactionType};
 use serde::Serialize;
 
 pub type ClientID = u16;

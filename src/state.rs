@@ -1,5 +1,7 @@
-use crate::accounts::{Account, AccountPerfomErr, ClientID};
-use crate::transactions::{Transaction, TransactionID, TransactionType};
+pub mod accounts;
+pub mod transactions;
+use accounts::{Account, AccountPerfomErr, ClientID};
+use transactions::{Transaction, TransactionID, TransactionType};
 use std::collections::{HashMap, HashSet};
 
 pub struct State {
